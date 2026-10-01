@@ -14,24 +14,50 @@ class Capture:
         Capture network traffic from an interface
         """
         interface = self.interface
-        logger.info(f"Capture traffic from interface {interface}")
+        logger.info(f"Capture du traffic de l'interface {interface}")
        
         self.packets = sniff (
-            iface=interface, count=10 #ecoute le réseau et s'arrête après 10 paquets
+            iface=interface, count=10
         )
-        logger.info(f"{len(self.packets)} packets captured")
+        logger.info(f"{len(self.packets)} paquets capturés")
 
     def sort_network_protocols(self) -> str:
+        protocols = [] 
+
+        for packet in self.packets: 
+            protocol = packet.lastlayer().name
+            protocols.append(protocol)
+    
+        protocols.sort()
+
+        return ", ".join(protocols)
+        
         """
         Sort and return all captured network protocols
         """
-        return ""
 
     def get_all_protocols(self) -> str:
+        protocols = {}
+
+        for packet in self.packets:
+            protocol = packet.lastlayer().name
+
+            if protocol in protocols:
+                protocols[protocol] += 1
+            else:
+                protocols[protocol] = 1
+
+        result = ""
+
+        for protocol in protocols:
+            result += f"{protocol}: {protocols[protocol]}\n"
+
+        return result
+
+
         """
         Return all protocols captured with total packets number
         """
-        return ""
 
     def analyse(self, protocols: str) -> None:
         """
@@ -47,8 +73,10 @@ class Capture:
         """
         all_protocols = self.get_all_protocols()
         sort = self.sort_network_protocols()
-        logger.debug(f"All protocols: {all_protocols}")
-        logger.debug(f"Sorted protocols: {sort}")
+        logger.info(f"All protocols:{all_protocols}")
+        #logger.debug(f"Sorted protocols: {sort}")
+        logger.info(f"Sorted protocols: {sort}")
+        #logger.debug(f"All protocols: {all_protocols}")
 
         self.summary = self._gen_summary()
 
