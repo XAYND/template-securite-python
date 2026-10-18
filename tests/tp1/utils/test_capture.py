@@ -41,7 +41,7 @@ def test_compter_protocoles():
     capture.compter_protocoles()
 
     # Then
-    assert capture.protocoles == {"TCP": 2, "ARP": 1}
+    assert capture.protocoles == {"ETHERNET": 3, "IP": 2, "TCP": 2, "ARP": 1}
 
 
 def test_sort_network_protocols_trie_les_noms():

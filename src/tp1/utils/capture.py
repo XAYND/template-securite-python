@@ -1,7 +1,7 @@
 from scapy.all import ARP, rdpcap
 
 from tp1.utils.config import logger
-from tp1.utils.lib import trouver_protocole
+from tp1.utils.lib import trouver_protocoles
 
 
 class Capture:
@@ -34,11 +34,11 @@ class Capture:
         """
         self.protocoles = {}
         for paquet in self.paquets:
-            protocole = trouver_protocole(paquet)
-            if protocole in self.protocoles:
-                self.protocoles[protocole] += 1
-            else:
-                self.protocoles[protocole] = 1
+            for protocole in trouver_protocoles(paquet):
+                if protocole in self.protocoles:
+                    self.protocoles[protocole] += 1
+                else:
+                    self.protocoles[protocole] = 1
 
     def sort_network_protocols(self) -> str:
         """

@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from scapy.all import ARP, DNS, ICMP, IP, TCP, UDP, Packet
+from scapy.all import ARP, DNS, ICMP, IP, TCP, UDP, Ether, Packet, Raw
 
 
 def hello_world() -> str:
@@ -36,27 +36,45 @@ def lire_arguments(arguments: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(arguments)
 
 
-def trouver_protocole(paquet: Packet) -> str:
+def est_http(paquet: Packet) -> bool:
     """
-    Retourne le nom du protocole principal d'un paquet
+    Indique si un paquet TCP contient du HTTP
 
     :param paquet: paquet scapy
-    :return: nom du protocole
+    :return: True si le paquet contient du HTTP
     """
+    if paquet.haslayer(TCP) and paquet.haslayer(Raw):
+        contenu = bytes(paquet[Raw].load)
+        if b"HTTP/" in contenu:
+            return True
+    return False
+
+
+def trouver_protocoles(paquet: Packet) -> list[str]:
+    """
+    Retourne la liste des protocoles présents dans un paquet
+
+    :param paquet: paquet scapy
+    :return: liste des noms de protocoles
+    """
+    protocoles = []
+    if paquet.haslayer(Ether):
+        protocoles.append("ETHERNET")
     if paquet.haslayer(ARP):
-        return "ARP"
-    elif paquet.haslayer(DNS):
-        return "DNS"
-    elif paquet.haslayer(TCP):
-        return "TCP"
-    elif paquet.haslayer(UDP):
-        return "UDP"
-    elif paquet.haslayer(ICMP):
-        return "ICMP"
-    elif paquet.haslayer(IP):
-        return "IP"
-    else:
-        return "Autre"
+        protocoles.append("ARP")
+    if paquet.haslayer(IP):
+        protocoles.append("IP")
+    if paquet.haslayer(ICMP):
+        protocoles.append("ICMP")
+    if paquet.haslayer(TCP):
+        protocoles.append("TCP")
+    if paquet.haslayer(UDP):
+        protocoles.append("UDP")
+    if paquet.haslayer(DNS):
+        protocoles.append("DNS")
+    if est_http(paquet):
+        protocoles.append("HTTP")
+    return protocoles
 
 
 def sauvegarder_json(donnees: dict, nom_fichier: str) -> None:

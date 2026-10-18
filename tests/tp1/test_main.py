@@ -24,7 +24,7 @@ def test_main_ecrit_le_rapport_json(tmp_path):
     # Then
     with open(fichier_json, encoding="utf-8") as fichier:
         resultat = json.load(fichier)
-    assert resultat["protocols"] == {"TCP": 1}
+    assert resultat["protocols"] == {"ETHERNET": 1, "IP": 1, "TCP": 1}
     assert resultat["attacks"] == []
     assert "flag" in resultat
 

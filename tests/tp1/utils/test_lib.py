@@ -1,14 +1,15 @@
 import json
 
 import pytest
-from scapy.all import ARP, DNS, ICMP, IP, TCP, UDP, Ether
+from scapy.all import ARP, DNS, ICMP, IP, TCP, UDP, Ether, Raw
 
 from src.tp1.utils.lib import (
     hello_world,
     choose_interface,
     lire_arguments,
     sauvegarder_json,
-    trouver_protocole,
+    trouver_protocoles,
+    est_http,
 )
 
 
@@ -54,24 +55,39 @@ def test_lire_arguments_sans_pcap_arrete_le_programme():
         lire_arguments([])
 
 
-def test_trouver_protocole_retourne_le_bon_nom():
+def test_est_http_avec_une_requete_http():
+    # Given
+    paquet = Ether() / IP() / TCP(dport=80) / Raw(load=b"GET / HTTP/1.1\r\n\r\n")
+
+    # When
+    resultat = est_http(paquet)
+
+    # Then
+    assert resultat is True
+
+
+def test_est_http_sans_contenu_http():
+    # Given
+    paquet_sans_contenu = Ether() / IP() / TCP(dport=80)
+    paquet_autre_contenu = Ether() / IP() / TCP() / Raw(load=b"bonjour")
+
+    # When / Then
+    assert est_http(paquet_sans_contenu) is False
+    assert est_http(paquet_autre_contenu) is False
+
+
+def test_trouver_protocoles_retourne_toutes_les_couches():
     # Given
     paquet_arp = Ether() / ARP()
     paquet_dns = Ether() / IP() / UDP() / DNS()
-    paquet_tcp = Ether() / IP() / TCP()
-    paquet_udp = Ether() / IP() / UDP()
     paquet_icmp = Ether() / IP() / ICMP()
-    paquet_ip = Ether() / IP()
-    paquet_autre = Ether()
+    paquet_http = Ether() / IP() / TCP() / Raw(load=b"GET / HTTP/1.1\r\n\r\n")
 
     # When / Then
-    assert trouver_protocole(paquet_arp) == "ARP"
-    assert trouver_protocole(paquet_dns) == "DNS"
-    assert trouver_protocole(paquet_tcp) == "TCP"
-    assert trouver_protocole(paquet_udp) == "UDP"
-    assert trouver_protocole(paquet_icmp) == "ICMP"
-    assert trouver_protocole(paquet_ip) == "IP"
-    assert trouver_protocole(paquet_autre) == "Autre"
+    assert trouver_protocoles(paquet_arp) == ["ETHERNET", "ARP"]
+    assert trouver_protocoles(paquet_dns) == ["ETHERNET", "IP", "UDP", "DNS"]
+    assert trouver_protocoles(paquet_icmp) == ["ETHERNET", "IP", "ICMP"]
+    assert trouver_protocoles(paquet_http) == ["ETHERNET", "IP", "TCP", "HTTP"]
 
 
 def test_sauvegarder_json_ecrit_les_donnees(tmp_path):
