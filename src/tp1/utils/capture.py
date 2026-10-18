@@ -1,63 +1,41 @@
-from src.tp1.utils.lib import choose_interface
+from scapy.all import rdpcap
+
 from tp1.utils.config import logger
-from scapy.all import sniff
 
 
 class Capture:
-    def __init__(self) -> None:
-        self.interface = choose_interface()
+    def __init__(self, pcap_file: str = "", interface: str = "") -> None:
+        self.pcap_file = pcap_file
+        self.interface = interface
+        self.packets = []
         self.summary = ""
-        self.packet = []
+
+    def read_pcap(self) -> None:
+        """
+        Read all packets from the pcap file
+        """
+        logger.info(f"Lecture du fichier {self.pcap_file}")
+        self.packets = rdpcap(self.pcap_file)
+        logger.info(f"{len(self.packets)} paquets lus")
 
     def capture_traffic(self) -> None:
         """
         Capture network traffic from an interface
         """
         interface = self.interface
-        logger.info(f"Capture du traffic de l'interface {interface}")
-       
-        self.packets = sniff (
-            iface=interface, count=10
-        )
-        logger.info(f"{len(self.packets)} paquets capturés")
+        logger.info(f"Capture traffic from interface {interface}")
 
     def sort_network_protocols(self) -> str:
-        protocols = [] 
-
-        for packet in self.packets: 
-            protocol = packet.lastlayer().name
-            protocols.append(protocol)
-    
-        protocols.sort()
-
-        return ", ".join(protocols)
-        
         """
         Sort and return all captured network protocols
         """
+        return ""
 
     def get_all_protocols(self) -> str:
-        protocols = {}
-
-        for packet in self.packets:
-            protocol = packet.lastlayer().name
-
-            if protocol in protocols:
-                protocols[protocol] += 1
-            else:
-                protocols[protocol] = 1
-
-        result = ""
-
-        for protocol in protocols:
-            result += f"{protocol}: {protocols[protocol]}\n"
-
-        return result
-
-
         """
         Return all protocols captured with total packets number
         """
+        return ""
 
     def analyse(self, protocols: str) -> None:
         """
@@ -73,10 +51,8 @@ class Capture:
         """
         all_protocols = self.get_all_protocols()
         sort = self.sort_network_protocols()
-        logger.info(f"All protocols:{all_protocols}")
-        #logger.debug(f"Sorted protocols: {sort}")
-        logger.info(f"Sorted protocols: {sort}")
-        #logger.debug(f"All protocols: {all_protocols}")
+        logger.debug(f"All protocols: {all_protocols}")
+        logger.debug(f"Sorted protocols: {sort}")
 
         self.summary = self._gen_summary()
 

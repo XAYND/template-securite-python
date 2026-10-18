@@ -1,4 +1,7 @@
 from unittest.mock import patch
+
+from scapy.all import ARP, IP, TCP, Ether, wrpcap
+
 from src.tp1.utils.capture import Capture
 
 
@@ -9,6 +12,22 @@ def test_capture_init():
     # Then
     assert capture.interface == ""
     assert capture.summary == ""
+    assert capture.pcap_file == ""
+    assert capture.packets == []
+
+
+def test_given_pcap_file_when_read_pcap_then_packets_are_loaded(tmp_path):
+    # Given
+    pcap_file = str(tmp_path / "test.pcap")
+    packets = [Ether() / IP() / TCP(), Ether() / ARP()]
+    wrpcap(pcap_file, packets)
+    capture = Capture(pcap_file)
+
+    # When
+    capture.read_pcap()
+
+    # Then
+    assert len(capture.packets) == 2
 
 
 def test_given_capture_when_capture_traffic_then_interface_is_set():
