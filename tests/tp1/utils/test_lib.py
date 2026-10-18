@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from scapy.all import ARP, DNS, ICMP, IP, TCP, UDP, Ether, Raw
+from scapy.all import ARP, DNS, ICMP, IP, LLC, STP, TCP, UDP, Dot3, Ether, Raw
 
 from src.tp1.utils.lib import (
     hello_world,
@@ -88,6 +88,17 @@ def test_trouver_protocoles_retourne_toutes_les_couches():
     assert trouver_protocoles(paquet_dns) == ["ETHERNET", "IP", "UDP", "DNS"]
     assert trouver_protocoles(paquet_icmp) == ["ETHERNET", "IP", "ICMP"]
     assert trouver_protocoles(paquet_http) == ["ETHERNET", "IP", "TCP", "HTTP"]
+
+
+def test_trouver_protocoles_avec_une_trame_802_3():
+    # Given
+    paquet_stp = Dot3(dst="01:80:c2:00:00:00") / LLC() / STP()
+
+    # When
+    resultat = trouver_protocoles(paquet_stp)
+
+    # Then
+    assert resultat == ["ETHERNET"]
 
 
 def test_sauvegarder_json_ecrit_les_donnees(tmp_path):

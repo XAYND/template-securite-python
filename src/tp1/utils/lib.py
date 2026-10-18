@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from scapy.all import ARP, DNS, ICMP, IP, TCP, UDP, Ether, Packet, Raw
+from scapy.all import ARP, DNS, ICMP, IP, TCP, UDP, Dot3, Ether, Packet, Raw
 
 
 def hello_world() -> str:
@@ -58,7 +58,7 @@ def trouver_protocoles(paquet: Packet) -> list[str]:
     :return: liste des noms de protocoles
     """
     protocoles = []
-    if paquet.haslayer(Ether):
+    if paquet.haslayer(Ether) or paquet.haslayer(Dot3):
         protocoles.append("ETHERNET")
     if paquet.haslayer(ARP):
         protocoles.append("ARP")
