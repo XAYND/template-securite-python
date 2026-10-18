@@ -24,7 +24,7 @@ def test_given_pcap_when_main_then_json_report_is_written(tmp_path):
     # Then
     with open(out_file, encoding="utf-8") as file:
         result = json.load(file)
-    assert "protocols" in result
+    assert result["protocols"] == {"TCP": 1}
     assert "attacks" in result
     assert "flag" in result
 

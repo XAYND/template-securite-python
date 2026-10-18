@@ -1,6 +1,8 @@
 import argparse
 import json
 
+from scapy.all import ARP, DNS, ICMP, IP, TCP, UDP, Packet
+
 
 def hello_world() -> str:
     """
@@ -32,6 +34,29 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pcap", required=True, help="fichier PCAP a analyser")
     parser.add_argument("--out", default="report.json", help="fichier JSON de sortie")
     return parser.parse_args(args)
+
+
+def get_protocol(packet: Packet) -> str:
+    """
+    Return the name of the main protocol of a packet
+
+    :param packet: scapy packet
+    :return: protocol name
+    """
+    if packet.haslayer(ARP):
+        return "ARP"
+    elif packet.haslayer(DNS):
+        return "DNS"
+    elif packet.haslayer(TCP):
+        return "TCP"
+    elif packet.haslayer(UDP):
+        return "UDP"
+    elif packet.haslayer(ICMP):
+        return "ICMP"
+    elif packet.haslayer(IP):
+        return "IP"
+    else:
+        return "Other"
 
 
 def save_json(data: dict, filename: str) -> None:

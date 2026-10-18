@@ -30,6 +30,42 @@ def test_given_pcap_file_when_read_pcap_then_packets_are_loaded(tmp_path):
     assert len(capture.packets) == 2
 
 
+def test_given_packets_when_count_protocols_then_protocols_are_counted():
+    # Given
+    capture = Capture()
+    capture.packets = [Ether() / IP() / TCP(), Ether() / IP() / TCP(), Ether() / ARP()]
+
+    # When
+    capture.count_protocols()
+
+    # Then
+    assert capture.protocols == {"TCP": 2, "ARP": 1}
+
+
+def test_given_protocols_when_sort_network_protocols_then_names_are_sorted():
+    # Given
+    capture = Capture()
+    capture.protocols = {"TCP": 2, "ARP": 1, "DNS": 4}
+
+    # When
+    result = capture.sort_network_protocols()
+
+    # Then
+    assert result == "ARP, DNS, TCP"
+
+
+def test_given_protocols_when_get_all_protocols_then_return_counts():
+    # Given
+    capture = Capture()
+    capture.protocols = {"TCP": 2, "ARP": 1}
+
+    # When
+    result = capture.get_all_protocols()
+
+    # Then
+    assert result == "TCP: 2\nARP: 1\n"
+
+
 def test_given_capture_when_capture_traffic_then_interface_is_set():
     # Given
     capture = Capture()
@@ -70,6 +106,7 @@ def test_analyse():
 
     # When
     with (
+        patch.object(capture, "count_protocols") as mock_count,
         patch.object(capture, "get_all_protocols") as mock_get_protocols,
         patch.object(capture, "sort_network_protocols") as mock_sort,
         patch.object(capture, "_gen_summary") as mock_gen_summary,
@@ -78,6 +115,7 @@ def test_analyse():
         capture.analyse("tcp")
 
     # Then
+    mock_count.assert_called_once()
     mock_get_protocols.assert_called_once()
     mock_sort.assert_called_once()
     mock_gen_summary.assert_called_once()

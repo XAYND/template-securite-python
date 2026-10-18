@@ -1,6 +1,7 @@
 from scapy.all import rdpcap
 
 from tp1.utils.config import logger
+from tp1.utils.lib import get_protocol
 
 
 class Capture:
@@ -8,6 +9,7 @@ class Capture:
         self.pcap_file = pcap_file
         self.interface = interface
         self.packets = []
+        self.protocols = {}
         self.summary = ""
 
     def read_pcap(self) -> None:
@@ -25,17 +27,33 @@ class Capture:
         interface = self.interface
         logger.info(f"Capture traffic from interface {interface}")
 
+    def count_protocols(self) -> None:
+        """
+        Count the number of packets for each protocol
+        """
+        self.protocols = {}
+        for packet in self.packets:
+            protocol = get_protocol(packet)
+            if protocol in self.protocols:
+                self.protocols[protocol] += 1
+            else:
+                self.protocols[protocol] = 1
+
     def sort_network_protocols(self) -> str:
         """
         Sort and return all captured network protocols
         """
-        return ""
+        names = sorted(self.protocols)
+        return ", ".join(names)
 
     def get_all_protocols(self) -> str:
         """
         Return all protocols captured with total packets number
         """
-        return ""
+        result = ""
+        for protocol in self.protocols:
+            result += f"{protocol}: {self.protocols[protocol]}\n"
+        return result
 
     def analyse(self, protocols: str) -> None:
         """
@@ -49,10 +67,11 @@ class Capture:
         attaquante.
         Sinon a cher que tout va bien
         """
+        self.count_protocols()
         all_protocols = self.get_all_protocols()
         sort = self.sort_network_protocols()
-        logger.debug(f"All protocols: {all_protocols}")
-        logger.debug(f"Sorted protocols: {sort}")
+        logger.info(f"All protocols:\n{all_protocols}")
+        logger.info(f"Sorted protocols: {sort}")
 
         self.summary = self._gen_summary()
 
