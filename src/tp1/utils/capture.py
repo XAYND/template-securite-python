@@ -1,7 +1,9 @@
-from scapy.all import ARP, rdpcap
+from scapy.all import ARP, IP, TCP, rdpcap
 
 from tp1.utils.config import logger
 from tp1.utils.lib import trouver_protocoles
+
+SEUIL_SCAN = 10
 
 
 class Capture:
@@ -120,6 +122,33 @@ class Capture:
                         attaquant = mac
                 self.ajouter_attaque("arp_spoofing", attaquant)
 
+    def ports_syn_par_ip(self) -> dict[str, list[int]]:
+        """
+        Retourne les ports différents visés par des paquets SYN pour chaque IP source
+
+        :return: dictionnaire ip -> liste des ports
+        """
+        ports = {}
+        for paquet in self.paquets:
+            if paquet.haslayer(IP) and paquet.haslayer(TCP) and paquet[TCP].flags == "S":
+                ip = paquet[IP].src
+                port = paquet[TCP].dport
+                if ip not in ports:
+                    ports[ip] = []
+                if port not in ports[ip]:
+                    ports[ip].append(port)
+        return ports
+
+    def detecter_scan_ports(self) -> None:
+        """
+        Détecte une IP qui envoie des paquets SYN vers beaucoup de ports différents
+        """
+        ports = self.ports_syn_par_ip()
+        for ip in ports:
+            if len(ports[ip]) >= SEUIL_SCAN:
+                logger.info(f"L'IP {ip} a envoyé des SYN vers {len(ports[ip])} ports")
+                self.ajouter_attaque("port_scan", ip)
+
     def analyse(self, protocols: str) -> None:
         """
         Analyse all captured data and return statement
@@ -139,6 +168,7 @@ class Capture:
         logger.info(f"Protocoles triés : {sort}")
 
         self.detecter_arp_spoofing()
+        self.detecter_scan_ports()
 
         self.summary = self._gen_summary()
 

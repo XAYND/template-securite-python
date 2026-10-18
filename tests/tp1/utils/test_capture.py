@@ -145,6 +145,52 @@ def test_detecter_arp_spoofing_sans_attaque():
     assert capture.attaques == []
 
 
+def test_ports_syn_par_ip():
+    # Given
+    capture = Capture()
+    capture.paquets = [
+        Ether() / IP(src="10.0.0.9") / TCP(dport=22, flags="S"),
+        Ether() / IP(src="10.0.0.9") / TCP(dport=80, flags="S"),
+        Ether() / IP(src="10.0.0.9") / TCP(dport=80, flags="S"),
+        Ether() / IP(src="10.0.0.5") / TCP(dport=443, flags="A"),
+    ]
+
+    # When
+    resultat = capture.ports_syn_par_ip()
+
+    # Then
+    assert resultat == {"10.0.0.9": [22, 80]}
+
+
+def test_detecter_scan_ports_trouve_l_attaquant():
+    # Given
+    capture = Capture()
+    for port in range(1, 21):
+        paquet = Ether() / IP(src="10.0.0.9") / TCP(dport=port, flags="S")
+        capture.paquets.append(paquet)
+
+    # When
+    capture.detecter_scan_ports()
+
+    # Then
+    assert capture.attaques == [{"type": "port_scan", "attacker": "10.0.0.9"}]
+
+
+def test_detecter_scan_ports_sans_attaque():
+    # Given
+    capture = Capture()
+    capture.paquets = [
+        Ether() / IP(src="10.0.0.5") / TCP(dport=80, flags="S"),
+        Ether() / IP(src="10.0.0.6") / TCP(dport=80, flags="S"),
+    ]
+
+    # When
+    capture.detecter_scan_ports()
+
+    # Then
+    assert capture.attaques == []
+
+
 def test_given_capture_when_capture_traffic_then_interface_is_set():
     # Given
     capture = Capture()
@@ -187,6 +233,7 @@ def test_analyse():
     with (
         patch.object(capture, "compter_protocoles") as mock_compter,
         patch.object(capture, "detecter_arp_spoofing") as mock_arp,
+        patch.object(capture, "detecter_scan_ports") as mock_scan,
         patch.object(capture, "get_all_protocols") as mock_get_protocols,
         patch.object(capture, "sort_network_protocols") as mock_sort,
         patch.object(capture, "_gen_summary") as mock_gen_summary,
@@ -197,6 +244,7 @@ def test_analyse():
     # Then
     mock_compter.assert_called_once()
     mock_arp.assert_called_once()
+    mock_scan.assert_called_once()
     mock_get_protocols.assert_called_once()
     mock_sort.assert_called_once()
     mock_gen_summary.assert_called_once()
