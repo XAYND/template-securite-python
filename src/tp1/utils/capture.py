@@ -85,47 +85,40 @@ class Capture:
                     table[ip].append(mac)
         return table
 
-    def count_unsolicited_arp(self) -> dict[str, int]:
+    def count_arp_replies(self) -> dict[str, int]:
         """
-        Count the ARP replies sent without a request before, for each MAC
+        Count the number of ARP replies sent by each MAC address
 
-        :return: dictionary mac -> number of unsolicited replies
+        :return: dictionary mac -> number of replies
         """
-        requests = []
-        counts = {}
+        replies = {}
         for packet in self.packets:
-            if not packet.haslayer(ARP):
-                continue
-            arp = packet[ARP]
-            if arp.op == 1:
-                requests.append((arp.psrc, arp.pdst))
-            elif arp.op == 2:
-                if (arp.pdst, arp.psrc) in requests:
-                    requests.remove((arp.pdst, arp.psrc))
+            if packet.haslayer(ARP) and packet[ARP].op == 2:
+                mac = packet[ARP].hwsrc
+                if mac in replies:
+                    replies[mac] += 1
                 else:
-                    if arp.hwsrc in counts:
-                        counts[arp.hwsrc] += 1
-                    else:
-                        counts[arp.hwsrc] = 1
-        return counts
+                    replies[mac] = 1
+        return replies
 
     def detect_arp_spoofing(self) -> None:
         """
         Detect an IP announced by several MAC addresses.
-        The attacker is the MAC with the most unsolicited replies.
+        The attacker is the MAC that sends the most ARP replies.
         """
         table = self.get_arp_table()
-        unsolicited = self.count_unsolicited_arp()
+        replies = self.count_arp_replies()
         for ip in table:
             macs = table[ip]
-            if len(macs) < 2:
-                continue
-            logger.info(f"L'IP {ip} est annoncee par plusieurs MAC : {macs}")
-            attacker = macs[0]
-            for mac in macs:
-                if unsolicited.get(mac, 0) > unsolicited.get(attacker, 0):
-                    attacker = mac
-            self.add_attack("arp_spoofing", attacker)
+            if len(macs) > 1:
+                logger.info(f"L'IP {ip} est annoncee par plusieurs MAC : {macs}")
+                attacker = ""
+                best = 0
+                for mac in macs:
+                    if replies[mac] > best:
+                        best = replies[mac]
+                        attacker = mac
+                self.add_attack("arp_spoofing", attacker)
 
     def analyse(self, protocols: str) -> None:
         """

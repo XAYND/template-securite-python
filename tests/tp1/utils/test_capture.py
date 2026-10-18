@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from scapy.all import ARP, IP, TCP, Ether, Packet, wrpcap
+from scapy.all import ARP, IP, TCP, Ether, wrpcap
 
 from src.tp1.utils.capture import Capture
 
@@ -67,14 +67,6 @@ def test_given_protocols_when_get_all_protocols_then_return_counts():
     assert result == "TCP: 2\nARP: 1\n"
 
 
-def make_arp_reply(ip: str, mac: str, target_ip: str) -> Packet:
-    return Ether(src=mac) / ARP(op=2, psrc=ip, hwsrc=mac, pdst=target_ip)
-
-
-def make_arp_request(ip: str, target_ip: str) -> Packet:
-    return Ether() / ARP(op=1, psrc=ip, pdst=target_ip)
-
-
 def test_given_new_attack_when_add_attack_then_attack_is_added_once():
     # Given
     capture = Capture()
@@ -91,10 +83,10 @@ def test_given_arp_replies_when_get_arp_table_then_macs_by_ip():
     # Given
     capture = Capture()
     capture.packets = [
-        make_arp_reply("10.0.0.1", "aa:aa:aa:aa:aa:aa", "10.0.0.5"),
-        make_arp_reply("10.0.0.1", "bb:bb:bb:bb:bb:bb", "10.0.0.5"),
-        make_arp_reply("10.0.0.1", "aa:aa:aa:aa:aa:aa", "10.0.0.6"),
-        make_arp_request("10.0.0.5", "10.0.0.1"),
+        Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="aa:aa:aa:aa:aa:aa", pdst="10.0.0.5"),
+        Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="bb:bb:bb:bb:bb:bb", pdst="10.0.0.5"),
+        Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="aa:aa:aa:aa:aa:aa", pdst="10.0.0.6"),
+        Ether() / ARP(op=1, psrc="10.0.0.5", pdst="10.0.0.1"),
     ]
 
     # When
@@ -104,31 +96,30 @@ def test_given_arp_replies_when_get_arp_table_then_macs_by_ip():
     assert result == {"10.0.0.1": ["aa:aa:aa:aa:aa:aa", "bb:bb:bb:bb:bb:bb"]}
 
 
-def test_given_request_and_replies_when_count_unsolicited_arp_then_only_unsolicited_counted():
+def test_given_arp_packets_when_count_arp_replies_then_replies_counted():
     # Given
     capture = Capture()
     capture.packets = [
-        make_arp_request("10.0.0.5", "10.0.0.1"),
-        make_arp_reply("10.0.0.1", "aa:aa:aa:aa:aa:aa", "10.0.0.5"),
-        make_arp_reply("10.0.0.1", "bb:bb:bb:bb:bb:bb", "10.0.0.5"),
-        make_arp_reply("10.0.0.1", "bb:bb:bb:bb:bb:bb", "10.0.0.6"),
+        Ether() / ARP(op=1, psrc="10.0.0.5", hwsrc="cc:cc:cc:cc:cc:cc", pdst="10.0.0.1"),
+        Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="aa:aa:aa:aa:aa:aa", pdst="10.0.0.5"),
+        Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="bb:bb:bb:bb:bb:bb", pdst="10.0.0.5"),
+        Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="bb:bb:bb:bb:bb:bb", pdst="10.0.0.6"),
     ]
 
     # When
-    result = capture.count_unsolicited_arp()
+    result = capture.count_arp_replies()
 
     # Then
-    assert result == {"bb:bb:bb:bb:bb:bb": 2}
+    assert result == {"aa:aa:aa:aa:aa:aa": 1, "bb:bb:bb:bb:bb:bb": 2}
 
 
 def test_given_two_macs_for_one_ip_when_detect_arp_spoofing_then_attacker_found():
     # Given
     capture = Capture()
     capture.packets = [
-        make_arp_request("10.0.0.5", "10.0.0.1"),
-        make_arp_reply("10.0.0.1", "aa:aa:aa:aa:aa:aa", "10.0.0.5"),
-        make_arp_reply("10.0.0.1", "bb:bb:bb:bb:bb:bb", "10.0.0.5"),
-        make_arp_reply("10.0.0.1", "bb:bb:bb:bb:bb:bb", "10.0.0.6"),
+        Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="aa:aa:aa:aa:aa:aa", pdst="10.0.0.5"),
+        Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="bb:bb:bb:bb:bb:bb", pdst="10.0.0.5"),
+        Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="bb:bb:bb:bb:bb:bb", pdst="10.0.0.6"),
     ]
 
     # When
@@ -142,8 +133,8 @@ def test_given_normal_arp_when_detect_arp_spoofing_then_no_attack():
     # Given
     capture = Capture()
     capture.packets = [
-        make_arp_request("10.0.0.5", "10.0.0.1"),
-        make_arp_reply("10.0.0.1", "aa:aa:aa:aa:aa:aa", "10.0.0.5"),
+        Ether() / ARP(op=1, psrc="10.0.0.5", pdst="10.0.0.1"),
+        Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="aa:aa:aa:aa:aa:aa", pdst="10.0.0.5"),
     ]
 
     # When
