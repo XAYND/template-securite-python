@@ -31,7 +31,7 @@ def main(args: list[str] | None = None) -> None:
     report.generate("array")
     report.save(filename)
 
-    result = {"protocols": capture.protocols, "attacks": [], "flag": ""}
+    result = {"protocols": capture.protocols, "attacks": capture.attacks, "flag": ""}
     save_json(result, options.out)
     logger.info(f"Rapport JSON ecrit dans {options.out}")
 

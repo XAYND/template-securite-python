@@ -1,4 +1,4 @@
-from scapy.all import rdpcap
+from scapy.all import ARP, rdpcap
 
 from tp1.utils.config import logger
 from tp1.utils.lib import get_protocol
@@ -10,6 +10,7 @@ class Capture:
         self.interface = interface
         self.packets = []
         self.protocols = {}
+        self.attacks = []
         self.summary = ""
 
     def read_pcap(self) -> None:
@@ -55,6 +56,77 @@ class Capture:
             result += f"{protocol}: {self.protocols[protocol]}\n"
         return result
 
+    def add_attack(self, attack_type: str, attacker: str) -> None:
+        """
+        Add an attack in the list if it is not already there
+
+        :param attack_type: type of the attack
+        :param attacker: MAC or IP address of the attacker
+        """
+        attack = {"type": attack_type, "attacker": attacker}
+        if attack not in self.attacks:
+            self.attacks.append(attack)
+            logger.warning(f"Attaque detectee : {attack_type} par {attacker}")
+
+    def get_arp_table(self) -> dict[str, list[str]]:
+        """
+        Return the MAC addresses announced for each IP in ARP replies
+
+        :return: dictionary ip -> list of MAC addresses
+        """
+        table = {}
+        for packet in self.packets:
+            if packet.haslayer(ARP) and packet[ARP].op == 2:
+                ip = packet[ARP].psrc
+                mac = packet[ARP].hwsrc
+                if ip not in table:
+                    table[ip] = []
+                if mac not in table[ip]:
+                    table[ip].append(mac)
+        return table
+
+    def count_unsolicited_arp(self) -> dict[str, int]:
+        """
+        Count the ARP replies sent without a request before, for each MAC
+
+        :return: dictionary mac -> number of unsolicited replies
+        """
+        requests = []
+        counts = {}
+        for packet in self.packets:
+            if not packet.haslayer(ARP):
+                continue
+            arp = packet[ARP]
+            if arp.op == 1:
+                requests.append((arp.psrc, arp.pdst))
+            elif arp.op == 2:
+                if (arp.pdst, arp.psrc) in requests:
+                    requests.remove((arp.pdst, arp.psrc))
+                else:
+                    if arp.hwsrc in counts:
+                        counts[arp.hwsrc] += 1
+                    else:
+                        counts[arp.hwsrc] = 1
+        return counts
+
+    def detect_arp_spoofing(self) -> None:
+        """
+        Detect an IP announced by several MAC addresses.
+        The attacker is the MAC with the most unsolicited replies.
+        """
+        table = self.get_arp_table()
+        unsolicited = self.count_unsolicited_arp()
+        for ip in table:
+            macs = table[ip]
+            if len(macs) < 2:
+                continue
+            logger.info(f"L'IP {ip} est annoncee par plusieurs MAC : {macs}")
+            attacker = macs[0]
+            for mac in macs:
+                if unsolicited.get(mac, 0) > unsolicited.get(attacker, 0):
+                    attacker = mac
+            self.add_attack("arp_spoofing", attacker)
+
     def analyse(self, protocols: str) -> None:
         """
         Analyse all captured data and return statement
@@ -72,6 +144,8 @@ class Capture:
         sort = self.sort_network_protocols()
         logger.info(f"All protocols:\n{all_protocols}")
         logger.info(f"Sorted protocols: {sort}")
+
+        self.detect_arp_spoofing()
 
         self.summary = self._gen_summary()
 
