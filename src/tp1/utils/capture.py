@@ -1,124 +1,124 @@
 from scapy.all import ARP, rdpcap
 
 from tp1.utils.config import logger
-from tp1.utils.lib import get_protocol
+from tp1.utils.lib import trouver_protocole
 
 
 class Capture:
-    def __init__(self, pcap_file: str = "", interface: str = "") -> None:
-        self.pcap_file = pcap_file
+    def __init__(self, fichier_pcap: str = "", interface: str = "") -> None:
+        self.fichier_pcap = fichier_pcap
         self.interface = interface
-        self.packets = []
-        self.protocols = {}
-        self.attacks = []
+        self.paquets = []
+        self.protocoles = {}
+        self.attaques = []
         self.summary = ""
 
-    def read_pcap(self) -> None:
+    def lire_pcap(self) -> None:
         """
-        Read all packets from the pcap file
+        Lit tous les paquets du fichier PCAP
         """
-        logger.info(f"Lecture du fichier {self.pcap_file}")
-        self.packets = rdpcap(self.pcap_file)
-        logger.info(f"{len(self.packets)} paquets lus")
+        logger.info(f"Lecture du fichier {self.fichier_pcap}")
+        self.paquets = rdpcap(self.fichier_pcap)
+        logger.info(f"{len(self.paquets)} paquets lus")
 
     def capture_traffic(self) -> None:
         """
         Capture network traffic from an interface
         """
         interface = self.interface
-        logger.info(f"Capture traffic from interface {interface}")
+        logger.info(f"Capture du trafic sur l'interface {interface}")
 
-    def count_protocols(self) -> None:
+    def compter_protocoles(self) -> None:
         """
-        Count the number of packets for each protocol
+        Compte le nombre de paquets pour chaque protocole
         """
-        self.protocols = {}
-        for packet in self.packets:
-            protocol = get_protocol(packet)
-            if protocol in self.protocols:
-                self.protocols[protocol] += 1
+        self.protocoles = {}
+        for paquet in self.paquets:
+            protocole = trouver_protocole(paquet)
+            if protocole in self.protocoles:
+                self.protocoles[protocole] += 1
             else:
-                self.protocols[protocol] = 1
+                self.protocoles[protocole] = 1
 
     def sort_network_protocols(self) -> str:
         """
         Sort and return all captured network protocols
         """
-        names = sorted(self.protocols)
-        return ", ".join(names)
+        noms = sorted(self.protocoles)
+        return ", ".join(noms)
 
     def get_all_protocols(self) -> str:
         """
         Return all protocols captured with total packets number
         """
-        result = ""
-        for protocol in self.protocols:
-            result += f"{protocol}: {self.protocols[protocol]}\n"
-        return result
+        texte = ""
+        for protocole in self.protocoles:
+            texte += f"{protocole}: {self.protocoles[protocole]}\n"
+        return texte
 
-    def add_attack(self, attack_type: str, attacker: str) -> None:
+    def ajouter_attaque(self, type_attaque: str, attaquant: str) -> None:
         """
-        Add an attack in the list if it is not already there
+        Ajoute une attaque dans la liste si elle n'y est pas déjà
 
-        :param attack_type: type of the attack
-        :param attacker: MAC or IP address of the attacker
+        :param type_attaque: type de l'attaque
+        :param attaquant: adresse MAC ou IP de l'attaquant
         """
-        attack = {"type": attack_type, "attacker": attacker}
-        if attack not in self.attacks:
-            self.attacks.append(attack)
-            logger.warning(f"Attaque detectee : {attack_type} par {attacker}")
+        attaque = {"type": type_attaque, "attacker": attaquant}
+        if attaque not in self.attaques:
+            self.attaques.append(attaque)
+            logger.warning(f"Attaque détectée : {type_attaque} par {attaquant}")
 
-    def get_arp_table(self) -> dict[str, list[str]]:
+    def table_arp(self) -> dict[str, list[str]]:
         """
-        Return the MAC addresses announced for each IP in ARP replies
+        Retourne les adresses MAC annoncées pour chaque IP dans les réponses ARP
 
-        :return: dictionary ip -> list of MAC addresses
+        :return: dictionnaire ip -> liste des adresses MAC
         """
         table = {}
-        for packet in self.packets:
-            if packet.haslayer(ARP) and packet[ARP].op == 2:
-                ip = packet[ARP].psrc
-                mac = packet[ARP].hwsrc
+        for paquet in self.paquets:
+            if paquet.haslayer(ARP) and paquet[ARP].op == 2:
+                ip = paquet[ARP].psrc
+                mac = paquet[ARP].hwsrc
                 if ip not in table:
                     table[ip] = []
                 if mac not in table[ip]:
                     table[ip].append(mac)
         return table
 
-    def count_arp_replies(self) -> dict[str, int]:
+    def compter_reponses_arp(self) -> dict[str, int]:
         """
-        Count the number of ARP replies sent by each MAC address
+        Compte le nombre de réponses ARP envoyées par chaque adresse MAC
 
-        :return: dictionary mac -> number of replies
+        :return: dictionnaire mac -> nombre de réponses
         """
-        replies = {}
-        for packet in self.packets:
-            if packet.haslayer(ARP) and packet[ARP].op == 2:
-                mac = packet[ARP].hwsrc
-                if mac in replies:
-                    replies[mac] += 1
+        reponses = {}
+        for paquet in self.paquets:
+            if paquet.haslayer(ARP) and paquet[ARP].op == 2:
+                mac = paquet[ARP].hwsrc
+                if mac in reponses:
+                    reponses[mac] += 1
                 else:
-                    replies[mac] = 1
-        return replies
+                    reponses[mac] = 1
+        return reponses
 
-    def detect_arp_spoofing(self) -> None:
+    def detecter_arp_spoofing(self) -> None:
         """
-        Detect an IP announced by several MAC addresses.
-        The attacker is the MAC that sends the most ARP replies.
+        Détecte une IP annoncée par plusieurs adresses MAC.
+        L'attaquant est la MAC qui envoie le plus de réponses ARP.
         """
-        table = self.get_arp_table()
-        replies = self.count_arp_replies()
+        table = self.table_arp()
+        reponses = self.compter_reponses_arp()
         for ip in table:
             macs = table[ip]
             if len(macs) > 1:
-                logger.info(f"L'IP {ip} est annoncee par plusieurs MAC : {macs}")
-                attacker = ""
-                best = 0
+                logger.info(f"L'IP {ip} est annoncée par plusieurs MAC : {macs}")
+                attaquant = ""
+                maximum = 0
                 for mac in macs:
-                    if replies[mac] > best:
-                        best = replies[mac]
-                        attacker = mac
-                self.add_attack("arp_spoofing", attacker)
+                    if reponses[mac] > maximum:
+                        maximum = reponses[mac]
+                        attaquant = mac
+                self.ajouter_attaque("arp_spoofing", attaquant)
 
     def analyse(self, protocols: str) -> None:
         """
@@ -132,13 +132,13 @@ class Capture:
         attaquante.
         Sinon a cher que tout va bien
         """
-        self.count_protocols()
+        self.compter_protocoles()
         all_protocols = self.get_all_protocols()
         sort = self.sort_network_protocols()
-        logger.info(f"All protocols:\n{all_protocols}")
-        logger.info(f"Sorted protocols: {sort}")
+        logger.info(f"Protocoles :\n{all_protocols}")
+        logger.info(f"Protocoles triés : {sort}")
 
-        self.detect_arp_spoofing()
+        self.detecter_arp_spoofing()
 
         self.summary = self._gen_summary()
 

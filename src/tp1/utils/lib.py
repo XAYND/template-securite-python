@@ -23,48 +23,48 @@ def choose_interface() -> str:
     return interface
 
 
-def parse_args(args: list[str] | None = None) -> argparse.Namespace:
+def lire_arguments(arguments: list[str] | None = None) -> argparse.Namespace:
     """
-    Read the command line arguments
+    Lit les arguments de la ligne de commande
 
-    :param args: list of arguments, None to use the real command line
-    :return: parsed arguments
+    :param arguments: liste des arguments, None pour utiliser la vraie ligne de commande
+    :return: les arguments lus
     """
     parser = argparse.ArgumentParser(description="Analyse d'un fichier PCAP")
-    parser.add_argument("--pcap", required=True, help="fichier PCAP a analyser")
+    parser.add_argument("--pcap", required=True, help="fichier PCAP à analyser")
     parser.add_argument("--out", default="report.json", help="fichier JSON de sortie")
-    return parser.parse_args(args)
+    return parser.parse_args(arguments)
 
 
-def get_protocol(packet: Packet) -> str:
+def trouver_protocole(paquet: Packet) -> str:
     """
-    Return the name of the main protocol of a packet
+    Retourne le nom du protocole principal d'un paquet
 
-    :param packet: scapy packet
-    :return: protocol name
+    :param paquet: paquet scapy
+    :return: nom du protocole
     """
-    if packet.haslayer(ARP):
+    if paquet.haslayer(ARP):
         return "ARP"
-    elif packet.haslayer(DNS):
+    elif paquet.haslayer(DNS):
         return "DNS"
-    elif packet.haslayer(TCP):
+    elif paquet.haslayer(TCP):
         return "TCP"
-    elif packet.haslayer(UDP):
+    elif paquet.haslayer(UDP):
         return "UDP"
-    elif packet.haslayer(ICMP):
+    elif paquet.haslayer(ICMP):
         return "ICMP"
-    elif packet.haslayer(IP):
+    elif paquet.haslayer(IP):
         return "IP"
     else:
-        return "Other"
+        return "Autre"
 
 
-def save_json(data: dict, filename: str) -> None:
+def sauvegarder_json(donnees: dict, nom_fichier: str) -> None:
     """
-    Save a dictionary in a JSON file
+    Sauvegarde un dictionnaire dans un fichier JSON
 
-    :param data: data to save
-    :param filename: name of the JSON file
+    :param donnees: données à sauvegarder
+    :param nom_fichier: nom du fichier JSON
     """
-    with open(filename, "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=2)
+    with open(nom_fichier, "w", encoding="utf-8") as fichier:
+        json.dump(donnees, fichier, indent=2)

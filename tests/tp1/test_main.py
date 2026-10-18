@@ -7,32 +7,32 @@ from scapy.all import IP, TCP, Ether, wrpcap
 from src.tp1.main import main
 
 
-def test_given_pcap_when_main_then_json_report_is_written(tmp_path):
+def test_main_ecrit_le_rapport_json(tmp_path):
     # Given
-    pcap_file = str(tmp_path / "test.pcap")
-    out_file = str(tmp_path / "report.json")
-    wrpcap(pcap_file, [Ether() / IP() / TCP()])
-    old_dir = os.getcwd()
+    fichier_pcap = str(tmp_path / "test.pcap")
+    fichier_json = str(tmp_path / "report.json")
+    wrpcap(fichier_pcap, [Ether() / IP() / TCP()])
+    ancien_dossier = os.getcwd()
     os.chdir(tmp_path)
 
     # When
     try:
-        main(["--pcap", pcap_file, "--out", out_file])
+        main(["--pcap", fichier_pcap, "--out", fichier_json])
     finally:
-        os.chdir(old_dir)
+        os.chdir(ancien_dossier)
 
     # Then
-    with open(out_file, encoding="utf-8") as file:
-        result = json.load(file)
-    assert result["protocols"] == {"TCP": 1}
-    assert result["attacks"] == []
-    assert "flag" in result
+    with open(fichier_json, encoding="utf-8") as fichier:
+        resultat = json.load(fichier)
+    assert resultat["protocols"] == {"TCP": 1}
+    assert resultat["attacks"] == []
+    assert "flag" in resultat
 
 
-def test_given_missing_pcap_when_main_then_exit(tmp_path):
+def test_main_sans_fichier_pcap_arrete_le_programme(tmp_path):
     # Given
-    pcap_file = str(tmp_path / "absent.pcap")
+    fichier_pcap = str(tmp_path / "absent.pcap")
 
     # When / Then
     with pytest.raises(SystemExit):
-        main(["--pcap", pcap_file])
+        main(["--pcap", fichier_pcap])

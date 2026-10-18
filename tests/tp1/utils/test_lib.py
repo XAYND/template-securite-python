@@ -3,7 +3,13 @@ import json
 import pytest
 from scapy.all import ARP, DNS, ICMP, IP, TCP, UDP, Ether
 
-from src.tp1.utils.lib import hello_world, choose_interface, parse_args, save_json, get_protocol
+from src.tp1.utils.lib import (
+    hello_world,
+    choose_interface,
+    lire_arguments,
+    sauvegarder_json,
+    trouver_protocole,
+)
 
 
 def test_when_hello_world_then_return_hello_world():
@@ -25,57 +31,57 @@ def test_when_choose_interface_then_return_empty_string():
     assert result == ""
 
 
-def test_given_pcap_and_out_when_parse_args_then_values_are_read():
+def test_lire_arguments_avec_pcap_et_out():
     # When
-    result = parse_args(["--pcap", "capture.pcap", "--out", "result.json"])
+    resultat = lire_arguments(["--pcap", "capture.pcap", "--out", "resultat.json"])
 
     # Then
-    assert result.pcap == "capture.pcap"
-    assert result.out == "result.json"
+    assert resultat.pcap == "capture.pcap"
+    assert resultat.out == "resultat.json"
 
 
-def test_given_no_out_when_parse_args_then_default_is_report_json():
+def test_lire_arguments_sans_out_donne_report_json():
     # When
-    result = parse_args(["--pcap", "capture.pcap"])
+    resultat = lire_arguments(["--pcap", "capture.pcap"])
 
     # Then
-    assert result.out == "report.json"
+    assert resultat.out == "report.json"
 
 
-def test_given_no_pcap_when_parse_args_then_exit():
+def test_lire_arguments_sans_pcap_arrete_le_programme():
     # When / Then
     with pytest.raises(SystemExit):
-        parse_args([])
+        lire_arguments([])
 
 
-def test_given_packets_when_get_protocol_then_return_protocol_name():
+def test_trouver_protocole_retourne_le_bon_nom():
     # Given
-    arp_packet = Ether() / ARP()
-    dns_packet = Ether() / IP() / UDP() / DNS()
-    tcp_packet = Ether() / IP() / TCP()
-    udp_packet = Ether() / IP() / UDP()
-    icmp_packet = Ether() / IP() / ICMP()
-    ip_packet = Ether() / IP()
-    other_packet = Ether()
+    paquet_arp = Ether() / ARP()
+    paquet_dns = Ether() / IP() / UDP() / DNS()
+    paquet_tcp = Ether() / IP() / TCP()
+    paquet_udp = Ether() / IP() / UDP()
+    paquet_icmp = Ether() / IP() / ICMP()
+    paquet_ip = Ether() / IP()
+    paquet_autre = Ether()
 
     # When / Then
-    assert get_protocol(arp_packet) == "ARP"
-    assert get_protocol(dns_packet) == "DNS"
-    assert get_protocol(tcp_packet) == "TCP"
-    assert get_protocol(udp_packet) == "UDP"
-    assert get_protocol(icmp_packet) == "ICMP"
-    assert get_protocol(ip_packet) == "IP"
-    assert get_protocol(other_packet) == "Other"
+    assert trouver_protocole(paquet_arp) == "ARP"
+    assert trouver_protocole(paquet_dns) == "DNS"
+    assert trouver_protocole(paquet_tcp) == "TCP"
+    assert trouver_protocole(paquet_udp) == "UDP"
+    assert trouver_protocole(paquet_icmp) == "ICMP"
+    assert trouver_protocole(paquet_ip) == "IP"
+    assert trouver_protocole(paquet_autre) == "Autre"
 
 
-def test_given_data_when_save_json_then_file_contains_data(tmp_path):
+def test_sauvegarder_json_ecrit_les_donnees(tmp_path):
     # Given
-    filename = str(tmp_path / "report.json")
-    data = {"protocols": {"TCP": 3}, "attacks": [], "flag": ""}
+    nom_fichier = str(tmp_path / "report.json")
+    donnees = {"protocols": {"TCP": 3}, "attacks": [], "flag": ""}
 
     # When
-    save_json(data, filename)
+    sauvegarder_json(donnees, nom_fichier)
 
     # Then
-    with open(filename, encoding="utf-8") as file:
-        assert json.load(file) == data
+    with open(nom_fichier, encoding="utf-8") as fichier:
+        assert json.load(fichier) == donnees

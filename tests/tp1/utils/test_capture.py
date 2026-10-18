@@ -12,77 +12,78 @@ def test_capture_init():
     # Then
     assert capture.interface == ""
     assert capture.summary == ""
-    assert capture.pcap_file == ""
-    assert capture.packets == []
-    assert capture.attacks == []
+    assert capture.fichier_pcap == ""
+    assert capture.paquets == []
+    assert capture.protocoles == {}
+    assert capture.attaques == []
 
 
-def test_given_pcap_file_when_read_pcap_then_packets_are_loaded(tmp_path):
+def test_lire_pcap_charge_les_paquets(tmp_path):
     # Given
-    pcap_file = str(tmp_path / "test.pcap")
-    packets = [Ether() / IP() / TCP(), Ether() / ARP()]
-    wrpcap(pcap_file, packets)
-    capture = Capture(pcap_file)
+    fichier_pcap = str(tmp_path / "test.pcap")
+    paquets = [Ether() / IP() / TCP(), Ether() / ARP()]
+    wrpcap(fichier_pcap, paquets)
+    capture = Capture(fichier_pcap)
 
     # When
-    capture.read_pcap()
+    capture.lire_pcap()
 
     # Then
-    assert len(capture.packets) == 2
+    assert len(capture.paquets) == 2
 
 
-def test_given_packets_when_count_protocols_then_protocols_are_counted():
+def test_compter_protocoles():
     # Given
     capture = Capture()
-    capture.packets = [Ether() / IP() / TCP(), Ether() / IP() / TCP(), Ether() / ARP()]
+    capture.paquets = [Ether() / IP() / TCP(), Ether() / IP() / TCP(), Ether() / ARP()]
 
     # When
-    capture.count_protocols()
+    capture.compter_protocoles()
 
     # Then
-    assert capture.protocols == {"TCP": 2, "ARP": 1}
+    assert capture.protocoles == {"TCP": 2, "ARP": 1}
 
 
-def test_given_protocols_when_sort_network_protocols_then_names_are_sorted():
+def test_sort_network_protocols_trie_les_noms():
     # Given
     capture = Capture()
-    capture.protocols = {"TCP": 2, "ARP": 1, "DNS": 4}
+    capture.protocoles = {"TCP": 2, "ARP": 1, "DNS": 4}
 
     # When
-    result = capture.sort_network_protocols()
+    resultat = capture.sort_network_protocols()
 
     # Then
-    assert result == "ARP, DNS, TCP"
+    assert resultat == "ARP, DNS, TCP"
 
 
-def test_given_protocols_when_get_all_protocols_then_return_counts():
+def test_get_all_protocols_retourne_les_nombres():
     # Given
     capture = Capture()
-    capture.protocols = {"TCP": 2, "ARP": 1}
+    capture.protocoles = {"TCP": 2, "ARP": 1}
 
     # When
-    result = capture.get_all_protocols()
+    resultat = capture.get_all_protocols()
 
     # Then
-    assert result == "TCP: 2\nARP: 1\n"
+    assert resultat == "TCP: 2\nARP: 1\n"
 
 
-def test_given_new_attack_when_add_attack_then_attack_is_added_once():
+def test_ajouter_attaque_une_seule_fois():
     # Given
     capture = Capture()
 
     # When
-    capture.add_attack("arp_spoofing", "aa:aa:aa:aa:aa:aa")
-    capture.add_attack("arp_spoofing", "aa:aa:aa:aa:aa:aa")
+    capture.ajouter_attaque("arp_spoofing", "aa:aa:aa:aa:aa:aa")
+    capture.ajouter_attaque("arp_spoofing", "aa:aa:aa:aa:aa:aa")
 
     # Then
-    assert capture.attacks == [{"type": "arp_spoofing", "attacker": "aa:aa:aa:aa:aa:aa"}]
+    assert capture.attaques == [{"type": "arp_spoofing", "attacker": "aa:aa:aa:aa:aa:aa"}]
 
 
-def test_given_arp_replies_when_get_arp_table_then_macs_by_ip():
+def test_table_arp_donne_les_mac_par_ip():
     # Given
     capture = Capture()
-    capture.packets = [
+    capture.paquets = [
         Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="aa:aa:aa:aa:aa:aa", pdst="10.0.0.5"),
         Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="bb:bb:bb:bb:bb:bb", pdst="10.0.0.5"),
         Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="aa:aa:aa:aa:aa:aa", pdst="10.0.0.6"),
@@ -90,16 +91,16 @@ def test_given_arp_replies_when_get_arp_table_then_macs_by_ip():
     ]
 
     # When
-    result = capture.get_arp_table()
+    resultat = capture.table_arp()
 
     # Then
-    assert result == {"10.0.0.1": ["aa:aa:aa:aa:aa:aa", "bb:bb:bb:bb:bb:bb"]}
+    assert resultat == {"10.0.0.1": ["aa:aa:aa:aa:aa:aa", "bb:bb:bb:bb:bb:bb"]}
 
 
-def test_given_arp_packets_when_count_arp_replies_then_replies_counted():
+def test_compter_reponses_arp():
     # Given
     capture = Capture()
-    capture.packets = [
+    capture.paquets = [
         Ether() / ARP(op=1, psrc="10.0.0.5", hwsrc="cc:cc:cc:cc:cc:cc", pdst="10.0.0.1"),
         Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="aa:aa:aa:aa:aa:aa", pdst="10.0.0.5"),
         Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="bb:bb:bb:bb:bb:bb", pdst="10.0.0.5"),
@@ -107,41 +108,41 @@ def test_given_arp_packets_when_count_arp_replies_then_replies_counted():
     ]
 
     # When
-    result = capture.count_arp_replies()
+    resultat = capture.compter_reponses_arp()
 
     # Then
-    assert result == {"aa:aa:aa:aa:aa:aa": 1, "bb:bb:bb:bb:bb:bb": 2}
+    assert resultat == {"aa:aa:aa:aa:aa:aa": 1, "bb:bb:bb:bb:bb:bb": 2}
 
 
-def test_given_two_macs_for_one_ip_when_detect_arp_spoofing_then_attacker_found():
+def test_detecter_arp_spoofing_trouve_l_attaquant():
     # Given
     capture = Capture()
-    capture.packets = [
+    capture.paquets = [
         Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="aa:aa:aa:aa:aa:aa", pdst="10.0.0.5"),
         Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="bb:bb:bb:bb:bb:bb", pdst="10.0.0.5"),
         Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="bb:bb:bb:bb:bb:bb", pdst="10.0.0.6"),
     ]
 
     # When
-    capture.detect_arp_spoofing()
+    capture.detecter_arp_spoofing()
 
     # Then
-    assert capture.attacks == [{"type": "arp_spoofing", "attacker": "bb:bb:bb:bb:bb:bb"}]
+    assert capture.attaques == [{"type": "arp_spoofing", "attacker": "bb:bb:bb:bb:bb:bb"}]
 
 
-def test_given_normal_arp_when_detect_arp_spoofing_then_no_attack():
+def test_detecter_arp_spoofing_sans_attaque():
     # Given
     capture = Capture()
-    capture.packets = [
+    capture.paquets = [
         Ether() / ARP(op=1, psrc="10.0.0.5", pdst="10.0.0.1"),
         Ether() / ARP(op=2, psrc="10.0.0.1", hwsrc="aa:aa:aa:aa:aa:aa", pdst="10.0.0.5"),
     ]
 
     # When
-    capture.detect_arp_spoofing()
+    capture.detecter_arp_spoofing()
 
     # Then
-    assert capture.attacks == []
+    assert capture.attaques == []
 
 
 def test_given_capture_when_capture_traffic_then_interface_is_set():
@@ -184,8 +185,8 @@ def test_analyse():
 
     # When
     with (
-        patch.object(capture, "count_protocols") as mock_count,
-        patch.object(capture, "detect_arp_spoofing") as mock_arp,
+        patch.object(capture, "compter_protocoles") as mock_compter,
+        patch.object(capture, "detecter_arp_spoofing") as mock_arp,
         patch.object(capture, "get_all_protocols") as mock_get_protocols,
         patch.object(capture, "sort_network_protocols") as mock_sort,
         patch.object(capture, "_gen_summary") as mock_gen_summary,
@@ -194,7 +195,7 @@ def test_analyse():
         capture.analyse("tcp")
 
     # Then
-    mock_count.assert_called_once()
+    mock_compter.assert_called_once()
     mock_arp.assert_called_once()
     mock_get_protocols.assert_called_once()
     mock_sort.assert_called_once()
